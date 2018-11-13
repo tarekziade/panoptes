@@ -17,7 +17,7 @@ return getMetrics();
 def forward_metrics(data):
     print("Metrics received")
 
-
+# do a screenshot too => /session/{sessionId}/moz/screenshot/full
 # XXX save the session ID and loop on execute/sync calls until we're told to
 # stop
 async def run():
