@@ -37,6 +37,11 @@ async def run():
             assert resp.status == 200
             data = await resp.json()
 
+        """
+        async with session.get(url + '/%s/moz/screenshot/full' % session_id) as resp:
+            assert resp.status == 200
+            data = await resp.json()
+        """
         data = {'context': 'chrome'}
         async with session.post(url + '/%s/moz/context' % session_id, json=data) as resp:
             assert resp.status == 200
@@ -58,6 +63,7 @@ async def run():
 
         print("Bye")
 
-loop = asyncio.get_event_loop()
-loop.run_until_complete(run())
-loop.close()
+#
+#loop = asyncio.get_event_loop()
+#loop.run_until_complete(run())
+#loop.close()
