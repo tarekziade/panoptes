@@ -23,6 +23,10 @@ class MetricsDB:
         ]
         return self.client.write_points(points)
 
+    def get_metrics(self):
+        res = self.client.query('select value from cpu_load_short;')
+        return res.raw['series']
+
 if __name__ == '__main__':
     m = MetricsDB()
     m.write_metrics()

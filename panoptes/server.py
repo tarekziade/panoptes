@@ -27,6 +27,17 @@ async def get_metrics(metrics):
 async def dashboard(request):
     return {}
 
+@routes.get('/2')
+@template('plots.jinja2')
+async def plots(request):
+    return {}
+
+@routes.get('/usage')
+async def plots(request):
+    if app.db is None:
+        app.db = MetricsDB()
+    return web.json_response(app.db.get_metrics())
+
 @routes.get('/start_session')
 async def start_session(request):
     app.gecko = GeckoClient()
