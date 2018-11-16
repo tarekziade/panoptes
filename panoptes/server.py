@@ -4,16 +4,22 @@ from aiohttp_jinja2 import setup, template
 import jinja2
 import logging
 import os
+
 from panoptes.driver import GeckoClient
+from panoptes.database import MetricsDB
 
 here = os.path.dirname(__file__)
 app = web.Application()
 setup(app, loader=jinja2.FileSystemLoader(os.path.join(here, "templates")))
 routes = web.RouteTableDef()
 app.gecko = None
+app.db = None
 
 async def get_metrics(metrics):
-    print(metrics)
+    if app.db is None:
+        app.db = MetricsDB()
+    # async??
+    print(app.db.write_points(metrics))
 
 
 @routes.get('/')
