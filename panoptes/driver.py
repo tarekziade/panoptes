@@ -1,12 +1,12 @@
 import aiohttp
 import asyncio
 
-
-script = """\
+metrics_script = """\
 "use strict";
 
 async function getMetrics() {
     let result = await ChromeUtils.requestPerformanceMetrics();
+    // XXX add call to get network info
     // XXX add process info
     return result;
 }
@@ -14,56 +14,61 @@ async function getMetrics() {
 return getMetrics();
 """
 
-def forward_metrics(data):
-    print("Metrics received")
 
-# do a screenshot too => /session/{sessionId}/moz/screenshot/full
-# XXX save the session ID and loop on execute/sync calls until we're told to
-# stop
-async def run():
-    url = 'http://localhost:4444/session'
-    data = {"capabilities": {"alwaysMatch": {"acceptInsecureCerts": True}}}
+class GeckoClient:
+    def __init__(self, host='http://localhost:4444', metrics_interval=60):
+        self.host = host
+        self.session_url = host + '/session'
+        self.options = {"capabilities": {"alwaysMatch":
+                                         {"acceptInsecureCerts": True}}}
+        self.session = aiohttp.ClientSession()
+        self.session_id = None
+        self.capabilities = None
+        self.metrics_cb = None
+        self.metrics_interval = metrics_interval
 
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, json=data) as resp:
+    async def call_metrics(self):
+        while self.session_id is not None:
+            await self.metrics_cb(await self.get_metrics())
+            await asyncio.sleep(self.metrics_interval)
+
+    def session_call(self, method, path, json=None):
+        meth = getattr(self.session, method.lower())
+        return meth(self.session_url + path, json=json)
+
+    async def start(self, metrics_cb=None):
+        data = self.options
+        async with self.session.post(self.host + '/session', json=data) as resp:
             data = await resp.json()
-            session_id = data["value"]["sessionId"]
-            capabilities = data["value"]["capabilities"]
+            if resp.status != 200:
+                raise Exception(resp.status)
+        self.session_id = data["value"]["sessionId"]
+        self.capabilities = data["value"]["capabilities"]
+        self.session_url = self.host + '/session/' + self.session_id
+        self.metrics_cb = metrics_cb
+        if metrics_cb is not None:
+            loop = asyncio.get_event_loop()
+            loop.create_task(self.call_metrics())
+        return self.session_id
 
-        print("Starting session %s" % session_id)
-
-        data = {'url': 'http://google.com'}
-        async with session.post(url + '/%s/url' % session_id, json=data) as resp:
+    async def stop(self):
+        async with self.session.delete(self.session_url) as resp:
             assert resp.status == 200
-            data = await resp.json()
+        self.session_id = None
+        self.capabilities = None
 
-        """
-        async with session.get(url + '/%s/moz/screenshot/full' % session_id) as resp:
+    async def visit_url(self, url):
+        data = {'url': url}
+        async with self.session_call('POST', '/url', json=data) as resp:
             assert resp.status == 200
-            data = await resp.json()
-        """
+            return await resp.json()
+
+    async def get_metrics(self):
         data = {'context': 'chrome'}
-        async with session.post(url + '/%s/moz/context' % session_id, json=data) as resp:
-            assert resp.status == 200
-            data = await resp.json()
-
-        args = []
-        data = {"script": script, "args": args}
-
-        for i in range(10):
-            async with session.post(url + '/%s/execute/sync' % session_id, json=data) as resp:
-                assert resp.status == 200
-                forward_metrics(await resp.json())
-            await asyncio.sleep(10)
-
-        print("Closing session %s" % session_id)
-
-        async with session.delete(url + '/%s' % session_id) as resp:
+        async with self.session_call("POST", '/moz/context', json=data) as resp:
             assert resp.status == 200
 
-        print("Bye")
-
-#
-#loop = asyncio.get_event_loop()
-#loop.run_until_complete(run())
-#loop.close()
+        data = {"script": metrics_script, "args": []}
+        async with self.session_call('POST', '/execute/sync', json=data) as resp:
+            assert resp.status == 200
+            return await resp.json()
