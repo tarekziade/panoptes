@@ -1,26 +1,30 @@
+import os
 import aiohttp
 import asyncio
 
-metrics_script = """\
-"use strict";
+JS_SCRIPT = os.path.join(os.path.dirname(__file__), 'metricsCollector.js')
+with open(JS_SCRIPT) as f:
+    metrics_script = f.read()
 
-async function getMetrics() {
-    let result = await ChromeUtils.requestPerformanceMetrics();
-    // XXX add call to get network info
-    // XXX add process info
-    return result;
-}
+_CAP = {"capabilities": {"alwaysMatch":
 
-return getMetrics();
-"""
+    {"acceptInsecureCerts": True,
+     "moz:firefoxOptions": {
+         "binary":
+         "/Users/tarek/Dev/gecko/mozilla-central-talos/objdir-osx/dist/NightlyDebug.app/Contents/MacOS/firefox",
+         "args": ["-no-remote", "-foreground", "-profile",
+
+             "/Users/tarek/Dev/gecko/mozilla-central-talos/objdir-osx/tmp/profile-default"],
+         "prefs": {
+             "io.activity.enabled": True,
+             }
+         }}}}
 
 
 class GeckoClient:
     def __init__(self, host='http://localhost:4444', metrics_interval=60):
         self.host = host
         self.session_url = host + '/session'
-        self.options = {"capabilities": {"alwaysMatch":
-                                         {"acceptInsecureCerts": True}}}
         self.session = aiohttp.ClientSession()
         self.session_id = None
         self.capabilities = None
@@ -37,8 +41,7 @@ class GeckoClient:
         return meth(self.session_url + path, json=json)
 
     async def start(self, metrics_cb=None):
-        data = self.options
-        async with self.session.post(self.host + '/session', json=data) as resp:
+        async with self.session.post(self.host + '/session', json=_CAP) as resp:
             data = await resp.json()
             if resp.status != 200:
                 raise Exception(resp.status)
@@ -67,7 +70,6 @@ class GeckoClient:
         data = {'context': 'chrome'}
         async with self.session_call("POST", '/moz/context', json=data) as resp:
             assert resp.status == 200
-
         data = {"script": metrics_script, "args": []}
         async with self.session_call('POST', '/execute/sync', json=data) as resp:
             assert resp.status == 200
