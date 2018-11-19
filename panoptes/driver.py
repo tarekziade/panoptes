@@ -10,15 +10,18 @@ _CAP = {"capabilities": {"alwaysMatch":
 
     {"acceptInsecureCerts": True,
      "moz:firefoxOptions": {
-         "binary":
-         "/Users/tarek/Dev/gecko/mozilla-central-talos/objdir-osx/dist/NightlyDebug.app/Contents/MacOS/firefox",
-         "args": ["-no-remote", "-foreground", "-profile",
-
-             "/Users/tarek/Dev/gecko/mozilla-central-talos/objdir-osx/tmp/profile-default"],
+#         "binary":
+#         "/Users/tarek/Dev/gecko/mozilla-central-talos/objdir-osx/dist/NightlyDebug.app/Contents/MacOS/firefox",
+#         "args": [
+#             #"-no-remote", "-foreground",
+#             "-profile", "profile-default"],
          "prefs": {
              "io.activity.enabled": True,
              }
-         }}}}
+         }
+    }
+    }
+}
 
 
 class GeckoClient:

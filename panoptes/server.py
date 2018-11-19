@@ -19,7 +19,7 @@ async def get_metrics(metrics):
     if app.db is None:
         app.db = MetricsDB()
     # async??
-    print(app.db.write_points(metrics))
+    print(app.db.write_metrics(metrics))
 
 
 @routes.get('/')

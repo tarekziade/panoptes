@@ -61,7 +61,7 @@ main {
     </header>
     <main>
       <h2 class="graphs-title">My Time Series Graphs</h2>
-      <div id="graphs-container">
+      <div id="graphs-container" style="height:100%">
         <!-- Append graph here -->
       </div>
     </main>
@@ -84,23 +84,24 @@ const loadData = () => {
       }
       const firstTrace = {
         type: 'scatter',
-        mode: 'lines',
-        name: 'Mean User Usage',
+        mode: 'lines+markers',
+        name: 'I/O Read',
         x: unpackData(parsedResponse, 'time'),
-        y: unpackData(parsedResponse, 'mean_usage_user'),
+        y: unpackData(parsedResponse, 'rx'),
         line: {color: '#17BECF'}
       }
       const secondTrace = {
         type: "scatter",
-        mode: "lines",
-        name: 'Mean System Usage',
+        mode: "lines+markers",
+        name: 'I/O Write',
         x: unpackData(parsedResponse, 'time'),
-        y: unpackData(parsedResponse, 'mean_usage_system'),
+        y: unpackData(parsedResponse, 'tx'),
         line: {color: '#7F7F7F'}
       }
       const data = [firstTrace, secondTrace];
+      console.log(data);
       const layout = {
-        title: 'Local CPU Usage',
+        title: 'Network & File',
       };
       return Plotly.newPlot('graphs-container', data, layout);
     })
