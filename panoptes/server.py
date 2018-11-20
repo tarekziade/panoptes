@@ -15,11 +15,15 @@ routes = web.RouteTableDef()
 app.gecko = None
 app.db = None
 
-async def get_metrics(metrics):
+def db():
     if app.db is None:
         app.db = MetricsDB()
+        app.db.reset_data()
+    return app.db
+
+async def get_metrics(metrics):
     # async??
-    print(app.db.write_metrics(metrics))
+    print(db().write_metrics(metrics))
 
 
 @routes.get('/')
@@ -27,16 +31,30 @@ async def get_metrics(metrics):
 async def dashboard(request):
     return {}
 
-@routes.get('/2')
-@template('plots.jinja2')
-async def plots(request):
-    return {}
 
-@routes.get('/usage')
+@routes.get('/io_usage')
 async def plots(request):
-    if app.db is None:
-        app.db = MetricsDB()
-    return web.json_response(app.db.get_metrics())
+    return web.json_response(db().get_io_metrics())
+
+
+@routes.get('/top_io')
+async def most_used(request):
+    return web.json_response(db().get_top_io())
+
+
+@routes.get('/timeline')
+async def timeline(request):
+    return web.json_response(db().get_timeline())
+
+
+@routes.get('/perf_usage')
+async def plots2(request):
+    return web.json_response(db().get_perf_metrics())
+
+@routes.get('/uptime')
+async def plots2(request):
+    return web.json_response(app.gecko.get_uptime())
+
 
 @routes.get('/start_session')
 async def start_session(request):

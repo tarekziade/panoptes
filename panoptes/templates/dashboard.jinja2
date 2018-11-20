@@ -33,7 +33,7 @@
         </div>
         <div class="level-right">
           <div class="level-item">
-            <button type="button" class="button is-small">
+            <button type="button" class="button is-small" id="uptime">
               Uptime : 6 days, 14 hours
             </button>
           </div>
@@ -41,109 +41,29 @@
       </div>
 
       <div class="columns is-multiline">
-        <div class="column">
-          <div class="box">
-            <div class="heading">Scheduler Actvity</div>
-            <div class="title">56,950</div>
-            <div class="level">
-              <div class="level-item">
-                <div class="">
-                  <div class="heading">15 mn</div>
-                  <div class="title is-5">250,000</div>
-                </div>
-              </div>
-              <div class="level-item">
-                <div class="">
-                  <div class="heading">10 mn</div>
-                  <div class="title is-5">750,000</div>
-                </div>
-              </div>
-              <div class="level-item">
-                <div class="">
-                  <div class="heading">5 mn</div>
-                  <div class="title is-5">25%</div>
-                </div>
-              </div>
+        <div class="column auto">
+            <div id="perf-container">
             </div>
+        </div>
+        <div class="column auto">
+            <div id="io-container">
           </div>
         </div>
-        <div class="column">
-          <div class="box">
-            <div class="heading">Network+IO Activity</div>
-            <div class="title">55% / 45%</div>
-            <div class="level">
-              <div class="level-item">
-                <div class="">
-                  <div class="heading">15 mn</div>
-                  <div class="title is-5">30%</div>
-                </div>
-              </div>
-              <div class="level-item">
-                <div class="">
-                  <div class="heading">10 mn</div>
-                  <div class="title is-5">25%</div>
-                </div>
-              </div>
-              <div class="level-item">
-                <div class="">
-                  <div class="heading">5 mn</div>
-                  <div class="title is-5">45%</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="column">
-          <div class="box">
-            <div class="heading">Memory Activity</div>
-            <div class="title">100MB &uarr;</div>
-            <div class="level">
-              <div class="level-item">
-                <div class="">
-                  <div class="heading">15 mn</div>
-                  <div class="title is-5">1560</div>
-                </div>
-              </div>
-              <div class="level-item">
-                <div class="">
-                  <div class="heading">10 mn</div>
-                  <div class="title is-5">368</div>
-                </div>
-              </div>
-              <div class="level-item">
-                <div class="">
-                  <div class="heading">5 mn</div>
-                  <div class="title is-5">77% / 23%</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="column">
-          <div class="box">
-            <div class="heading">Firefox Processes</div>
-            <div class="title">75% / 25%</div>
-            <div class="level">
-              <div class="level-item">
-                <div class="">
-                  <div class="heading">Main</div>
-                  <div class="title is-5">425,000</div>
-                </div>
-              </div>
-              <div class="level-item">
-                <div class="">
-                  <div class="heading">Content 1</div>
-                  <div class="title is-5">106,250</div>
-                </div>
-              </div>
-              <div class="level-item">
-                <div class="">
-                  <div class="heading">Content 2</div>
-                  <div class="title is-5">+ 28,5%</div>
-                </div>
-              </div>
-            </div>
-          </div>
+
+        <div class="column auto">
+            <div class="title is_4">Top Five I/O</div>
+            <table class="table" id="top_io">
+               <tr>
+                  <th>Location</th>
+                  <th>Reads</th>
+                  <th>Writes</th>
+               </tr>
+               <tr><td></td><td></td><td></td></tr>
+               <tr><td></td><td></td><td></td></tr>
+               <tr><td></td><td></td><td></td></tr>
+               <tr><td></td><td></td><td></td></tr>
+               <tr><td></td><td></td><td></td></tr>
+            </table>
         </div>
       </div>
 
@@ -163,11 +83,9 @@
         <div class="column is-6">
           <div class="panel">
             <p class="panel-heading">
-              Javascript Console
+              Actions timeline
             </p>
             <div class="panel-block">
-                <textarea class="textarea is-info" placeholder="Run some Javascript on the instance here."
-                 ></textarea>
 
             </div>
           </div>
@@ -177,4 +95,188 @@
   </div>
 </div>
 
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script>
+function secondsToStr (data) {
+  var milliseconds = 1000 * data;
+    function numberEnding (number) {
+        return (number > 1) ? 's' : '';
+    }
+
+    var temp = Math.floor(milliseconds / 1000);
+    var years = Math.floor(temp / 31536000);
+    if (years) {
+        return years + ' year' + numberEnding(years);
+    }
+    //TODO: Months! Maybe weeks?
+    var days = Math.floor((temp %= 31536000) / 86400);
+    if (days) {
+        return days + ' day' + numberEnding(days);
+    }
+    var hours = Math.floor((temp %= 86400) / 3600);
+    if (hours) {
+        return hours + ' hour' + numberEnding(hours);
+    }
+    var minutes = Math.floor((temp %= 3600) / 60);
+    if (minutes) {
+        return minutes + ' minute' + numberEnding(minutes);
+    }
+    var seconds = temp % 60;
+    if (seconds) {
+        return seconds + ' second' + numberEnding(seconds);
+    }
+    return 'less than a second'; //'just now' //or other string you like;
+}
+
+var io_graph;
+var perf_graph;
+
+const loadData = () => {
+
+  fetch('/perf_usage')
+    .then( response => {
+      if (response.status !== 200) {
+        console.log(response);
+      }
+      return response;
+    })
+    .then(response => response.json())
+    .then(parsedResponse => {
+      const unpackData = (arr, key) => {
+        return arr.map(obj => obj[key])
+      }
+      const firstTrace = {
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'Dispatches',
+        x: unpackData(parsedResponse, 'time'),
+        y: unpackData(parsedResponse, 'count'),
+        line: {color: '#17BECF'}
+      }
+      const secondTrace = {
+        type: "scatter",
+        mode: "lines+markers",
+        name: 'Duration (ms)',
+        x: unpackData(parsedResponse, 'time'),
+        y: unpackData(parsedResponse, 'duration'),
+        line: {color: '#7F7F7F'}
+      }
+      const data = [firstTrace, secondTrace];
+      const layout = {
+        title: 'Quantum Scheduler Activity',
+        annotations: [{
+    text: "Sampled every minute",
+      font: {
+      size: 13,
+      color: 'rgb(116, 101, 130)',
+    },
+    showarrow: false,
+    align: 'center',
+    x: 0.5,
+    y: 1,
+    xref: 'paper',
+    yref: 'paper',
+  }],
+        showlegend: false
+      };
+        perf_graph = Plotly.newPlot('perf-container', data, layout);
+      return perf_graph;
+    })
+    .catch( error => console.log(error) );
+
+  fetch('/io_usage')
+    .then( response => {
+      if (response.status !== 200) {
+        console.log(response);
+      }
+      return response;
+    })
+    .then(response => response.json())
+    .then(parsedResponse => {
+      const unpackData = (arr, key) => {
+        return arr.map(obj => obj[key])
+      }
+      const firstTrace = {
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'I/O Read (Bytes)',
+        x: unpackData(parsedResponse, 'time'),
+        y: unpackData(parsedResponse, 'rx'),
+        line: {color: '#17BECF'}
+      }
+      const secondTrace = {
+        type: "scatter",
+        mode: "lines+markers",
+        name: 'I/O Write (Bytes)',
+        x: unpackData(parsedResponse, 'time'),
+        y: unpackData(parsedResponse, 'tx'),
+        line: {color: '#7F7F7F'}
+      }
+      const data = [firstTrace, secondTrace];
+      const layout = {
+        title: 'I/O Activity',
+
+        annotations: [{
+    text: "Sampled every minute",
+      font: {
+      size: 13,
+      color: 'rgb(116, 101, 130)',
+    },
+    showarrow: false,
+    align: 'center',
+    x: 0.5,
+    y: 1,
+    xref: 'paper',
+    yref: 'paper',
+  }],
+        showlegend: false
+      };
+      io_graph = Plotly.newPlot('io-container', data, layout);
+      return io_graph;
+    })
+    .catch( error => console.log(error));
+
+    fetch('/top_io')
+    .then( response => {
+      if (response.status !== 200) {
+        console.log(response);
+      }
+      return response;
+    })
+    .then(response => response.json())
+    .then(parsedResponse => {
+
+      let i = 1;
+      var table = document.getElementById("top_io");
+      parsedResponse.forEach(function(item)
+        {
+       var row = table.rows[i];
+       row.cells[0].innerHTML = item.location;
+       row.cells[1].innerHTML = item.rx;
+       row.cells[2].innerHTML = item.tx;
+          i++;
+        }
+      );
+    });
+
+    fetch('/uptime')
+    .then( response => {
+      if (response.status !== 200) {
+        console.log(response);
+      }
+      return response;
+    })
+    .then(response => response.json())
+    .then(parsedResponse => {
+      var uptime = document.getElementById("uptime");
+      uptime.innerHTML = "Uptime: " + secondsToStr(parsedResponse.value);
+
+    })
+    .catch( error => console.log(error));
+}
+
+$(window).on('load', loadData);
+window.setInterval(loadData, 60000);
+</script>
 </body></html>
