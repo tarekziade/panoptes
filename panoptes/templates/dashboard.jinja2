@@ -266,7 +266,7 @@ const loadData = () => {
       const firstTrace = {
         type: 'scatter',
         mode: 'lines+markers',
-        name: 'Kernel',
+        name: 'System time',
         x: unpackData(parsedResponse, 'time'),
         y: unpackData(parsedResponse, 'kernel'),
         line: {color: '#17BECF'}
@@ -274,7 +274,7 @@ const loadData = () => {
       const secondTrace = {
         type: "scatter",
         mode: "lines+markers",
-        name: 'User',
+        name: 'User time',
         x: unpackData(parsedResponse, 'time'),
         y: unpackData(parsedResponse, 'user'),
         line: {color: '#7F7F7F'}
@@ -298,11 +298,11 @@ const loadData = () => {
       const cpu_data = [firstTrace, secondTrace];
       const mem_data = [thirdTrace, fourthTrace];
       const layout = {
-        title: 'CPU Usage (All Processes Combined)',
+        title: 'Total CPU Usage (%)',
         showlegend: false
       };
       const layout2 = {
-        title: 'Memory Usage (All Processes Combined)',
+        title: 'Total Memory Usage (MB)',
         showlegend: false
       };
       Plotly.newPlot('memory-container', mem_data, layout2);

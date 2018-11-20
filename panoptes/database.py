@@ -20,28 +20,45 @@ class MetricsDB:
             return [0, 0]
 
         self.diffs = defaultdict(m_)
+        self.pids_diffs = defaultdict(m_)
         self.measures = 0
 
     def reset_data(self):
-        self.client.query("delete from network_io;")
-        self.client.query("delete from performance;")
-        self.client.query("delete from process;")
+        self.client.drop_database('gecko')
+        self.client.create_database('gecko')
+        #self.client.query("delete from network_io;")
+        #self.client.query("delete from performance;")
+        #self.client.query("delete from process;")
 
     def write_metrics(self, metrics):
         points = []
         timestamp = now()
         self.measures += 1
+        refresh_rate = 60
         proc_data = metrics['value'].get('proc', [])
         for item in proc_data:
+            kernel = item['cpuKernel']
+            user = item['cpuUser']
+            pid = item['pid']
+            old_kernel, old_user = self.pids_diffs[pid]
+            if self.measures == 1:
+                self.pids_diffs[pid] = kernel, user
+                continue
+
+            self.pids_diffs[pid] = kernel, user
+            kernel_p = (float)((kernel - old_kernel)/(refresh_rate*10000000.0))
+            user_p = (float)((user - old_user)/(refresh_rate*10000000.0));
             point = {"measurement": "process",
                     "tags": {"filename": item['filename'], 'type': item['type'],
                              "childID": item.get('childID', -1)},
                      "time": timestamp,
-                     "fields": {"cpuKernel": item['cpuKernel'],
-                                "cpuUser": item['cpuUser'],
-                                "residentSetSize": item['residentSetSize'],
-                                "virtualMemorySize": item['virtualMemorySize'],
-                                "pid": item['pid']
+                     "fields": {"cpuKernel": kernel_p,
+                                "cpuUser": user_p,
+                                "residentSetSize":
+                                int(item['residentSetSize']/1024./1024.),
+                                "virtualMemorySize":
+                                int(item['virtualMemorySize']/1024./1024.),
+                                "pid": pid
                                 }
                     }
             points.append(point)
