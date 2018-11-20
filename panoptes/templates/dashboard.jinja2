@@ -34,7 +34,7 @@
         <div class="level-right">
           <div class="level-item">
             <button type="button" class="button is-small" id="uptime">
-              Uptime : 6 days, 14 hours
+              Uptime : Unkown
             </button>
           </div>
         </div>
@@ -51,7 +51,18 @@
         </div>
 
         <div class="column auto">
-            <div class="title is_4">Top Five I/O</div>
+            <div id="cpu-container">
+          </div>
+        </div>
+
+  <div class="column auto">
+            <div id="memory-container">
+          </div>
+        </div>
+
+      </div>
+      <div class="columns is-multiline">
+               <div class="column auto">
             <table class="table" id="top_io">
                <tr>
                   <th>Location</th>
@@ -64,34 +75,25 @@
                <tr><td></td><td></td><td></td></tr>
                <tr><td></td><td></td><td></td></tr>
             </table>
+       </div>
+
+      </div>
+      <div class="columns is-multiline">
+       <div class="column auto">
+          <div class="panel">
+            <p class="panel-heading">
+              Timeline
+            </p>
+            <div class="panel-block">
+
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="columns is-multiline">
-        <div class="column is-6">
-          <div class="panel">
-            <p class="panel-heading">
-              Screenshot
-            </p>
-            <div class="panel-block">
-              <figure class="image is-16x9">
-                <img src="/static/screenshot.png">
-              </figure>
-            </div>
-          </div>
-        </div>
-        <div class="column is-6">
-          <div class="panel">
-            <p class="panel-heading">
-              Actions timeline
-            </p>
-            <div class="panel-block">
-
-            </div>
-          </div>
-        </div>
       </div>
-    </main>
+            </main>
   </div>
 </div>
 
@@ -165,20 +167,7 @@ const loadData = () => {
       const data = [firstTrace, secondTrace];
       const layout = {
         title: 'Quantum Scheduler Activity',
-        annotations: [{
-    text: "Sampled every minute",
-      font: {
-      size: 13,
-      color: 'rgb(116, 101, 130)',
-    },
-    showarrow: false,
-    align: 'center',
-    x: 0.5,
-    y: 1,
-    xref: 'paper',
-    yref: 'paper',
-  }],
-        showlegend: false
+       showlegend: false
       };
         perf_graph = Plotly.newPlot('perf-container', data, layout);
       return perf_graph;
@@ -215,21 +204,7 @@ const loadData = () => {
       }
       const data = [firstTrace, secondTrace];
       const layout = {
-        title: 'I/O Activity',
-
-        annotations: [{
-    text: "Sampled every minute",
-      font: {
-      size: 13,
-      color: 'rgb(116, 101, 130)',
-    },
-    showarrow: false,
-    align: 'center',
-    x: 0.5,
-    y: 1,
-    xref: 'paper',
-    yref: 'paper',
-  }],
+        title: 'I/O Activity (All FDs combined)',
         showlegend: false
       };
       io_graph = Plotly.newPlot('io-container', data, layout);
@@ -272,6 +247,67 @@ const loadData = () => {
       var uptime = document.getElementById("uptime");
       uptime.innerHTML = "Uptime: " + secondsToStr(parsedResponse.value);
 
+    })
+    .catch( error => console.log(error));
+
+
+  fetch('/proc_usage')
+    .then( response => {
+      if (response.status !== 200) {
+        console.log(response);
+      }
+      return response;
+    })
+    .then(response => response.json())
+    .then(parsedResponse => {
+      const unpackData = (arr, key) => {
+        return arr.map(obj => obj[key])
+      }
+      const firstTrace = {
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'Kernel',
+        x: unpackData(parsedResponse, 'time'),
+        y: unpackData(parsedResponse, 'kernel'),
+        line: {color: '#17BECF'}
+      }
+      const secondTrace = {
+        type: "scatter",
+        mode: "lines+markers",
+        name: 'User',
+        x: unpackData(parsedResponse, 'time'),
+        y: unpackData(parsedResponse, 'user'),
+        line: {color: '#7F7F7F'}
+      }
+      const thirdTrace = {
+        type: "scatter",
+        mode: "lines+markers",
+        name: 'Virtual Memory',
+        x: unpackData(parsedResponse, 'time'),
+        y: unpackData(parsedResponse, 'virtualMemorySize'),
+        line: {color: '#7F7F7F'}
+      }
+      const fourthTrace = {
+        type: "scatter",
+        mode: "lines+markers",
+        name: 'Resident Memory',
+        x: unpackData(parsedResponse, 'time'),
+        y: unpackData(parsedResponse, 'residentSetSize'),
+        line: {color: '#17BECF'}
+      }
+      const cpu_data = [firstTrace, secondTrace];
+      const mem_data = [thirdTrace, fourthTrace];
+      const layout = {
+        title: 'CPU Usage (All Processes Combined)',
+        showlegend: false
+      };
+      const layout2 = {
+        title: 'Memory Usage (All Processes Combined)',
+        showlegend: false
+      };
+      Plotly.newPlot('memory-container', mem_data, layout2);
+
+      Plotly.newPlot('cpu-container', cpu_data, layout);
     })
     .catch( error => console.log(error));
 }

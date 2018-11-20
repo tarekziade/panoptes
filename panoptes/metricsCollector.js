@@ -4,7 +4,8 @@ async function getMetrics() {
     let results = {};
     results['performance'] = await ChromeUtils.requestPerformanceMetrics();
     results['io'] = await ChromeUtils.requestIOActivity();
-    // XXX add process info
+    // make procinfo a promise..
+    results['proc'] = ChromeUtils.getProcInfo();
     return results;
 }
 

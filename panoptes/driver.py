@@ -42,6 +42,8 @@ class GeckoClient:
         self.started_at = None
 
     def get_uptime(self):
+        if self.started_at is None:
+            return
         uptime = datetime.datetime.now() - self.started_at
         return {'value': uptime.total_seconds()}
 

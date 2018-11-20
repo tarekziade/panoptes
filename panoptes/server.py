@@ -37,6 +37,10 @@ async def plots(request):
     return web.json_response(db().get_io_metrics())
 
 
+@routes.get('/proc_usage')
+async def most_used(request):
+    return web.json_response(db().get_proc_metrics())
+
 @routes.get('/top_io')
 async def most_used(request):
     return web.json_response(db().get_top_io())
@@ -44,7 +48,9 @@ async def most_used(request):
 
 @routes.get('/timeline')
 async def timeline(request):
-    return web.json_response(db().get_timeline())
+    if app.gecko is None:
+        return []
+    return web.json_response(app.gecko.get_timeline())
 
 
 @routes.get('/perf_usage')
@@ -53,6 +59,8 @@ async def plots2(request):
 
 @routes.get('/uptime')
 async def plots2(request):
+    if app.gecko is None:
+        return 0
     return web.json_response(app.gecko.get_uptime())
 
 

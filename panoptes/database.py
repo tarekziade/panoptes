@@ -25,12 +25,28 @@ class MetricsDB:
     def reset_data(self):
         self.client.query("delete from network_io;")
         self.client.query("delete from performance;")
+        self.client.query("delete from process;")
 
     def write_metrics(self, metrics):
-        self.measures += 1
-        io_data = metrics['value'].get('io', [])
         points = []
         timestamp = now()
+        self.measures += 1
+        proc_data = metrics['value'].get('proc', [])
+        for item in proc_data:
+            point = {"measurement": "process",
+                    "tags": {"filename": item['filename'], 'type': item['type'],
+                             "childID": item.get('childID', -1)},
+                     "time": timestamp,
+                     "fields": {"cpuKernel": item['cpuKernel'],
+                                "cpuUser": item['cpuUser'],
+                                "residentSetSize": item['residentSetSize'],
+                                "virtualMemorySize": item['virtualMemorySize'],
+                                "pid": item['pid']
+                                }
+                    }
+            points.append(point)
+
+        io_data = metrics['value'].get('io', [])
         changed = []
         for item in io_data:
             location = item['location']
@@ -105,8 +121,36 @@ class MetricsDB:
         print("Writing %d points" % len(points))
         return self.client.write_points(points)
 
-    def get_perf_metrics(self):
+    def get_proc_metrics(self):
+
         timestamp = now(24)
+        res = self.client.query("""
+    select
+        cpuKernel,
+        cpuUser,
+        residentSetSize,
+        virtualMemorySize from process
+    where time > '%s'
+                    """ % (timestamp))
+
+
+        if 'series' not in res.raw:
+            return []
+        def _s():
+            return {'kernel': 0, 'user':0, 'residentSetSize':0 ,
+                    'virtualMemorySize':0}
+        by_time = defaultdict(_s)
+        for i in res.raw['series'][0]['values']:
+            time = i[0]
+            by_time[time]['kernel'] += i[1]
+            by_time[time]['user'] += i[2]
+            by_time[time]['residentSetSize'] += i[3]
+            by_time[time]['virtualMemorySize'] += i[4]
+            by_time[time]['time'] = time
+        return list(by_time.values())
+
+    def get_perf_metrics(self):
+        timestamp = now(24)  # XXX replace by uptime
         res = self.client.query("""
         select dispatches, duration_ from performance
         where time > '%s'
