@@ -1,8 +1,20 @@
 from influxdb import InfluxDBClient
-import random
-import datetime
+from datetime import datetime
 from collections import defaultdict
 import socket
+
+
+def InfluxItems(*fields):
+    def init_fields(*fields):
+        def _init():
+            map = {}
+            for field in fields:
+                map[field] = 0
+            return map
+
+        return _init
+
+    return defaultdict(init_fields(*fields))
 
 
 # crappy ad-hoc diff queries
@@ -11,24 +23,20 @@ class MetricsDB:
         self.localhost = socket.gethostbyname(socket.gethostname())
         self.client = InfluxDBClient("localhost", 8086, "root", "root", "gecko")
         self.client.create_database("gecko")
-
-        def m_():
-            return [0, 0]
-
-        self.diffs = defaultdict(m_)
-        self.pids_diffs = defaultdict(m_)
-        self.io_diffs = defaultdict(m_)
+        self.diffs = defaultdict(lambda: [0, 0])
+        self.pids_diffs = defaultdict(lambda: [0, 0])
+        self.io_diffs = defaultdict(lambda: [0, 0])
         self.measures = 0
         self.session_start = None
 
     def reset_data(self):
         self.client.drop_database("gecko")
         self.client.create_database("gecko")
-        self.session_start = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+        self.session_start = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
 
     def write_metrics(self, metrics):
         points = []
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+        timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         self.measures += 1
         refresh_rate = 60
         proc_data = metrics["value"].get("proc", [])
@@ -42,8 +50,8 @@ class MetricsDB:
                 continue
 
             self.pids_diffs[pid] = kernel, user
-            kernel_p = (float)((kernel - old_kernel) / (refresh_rate * 10000000.0))
-            user_p = (float)((user - old_user) / (refresh_rate * 10000000.0))
+            kernel_p = float((kernel - old_kernel) / (refresh_rate * 10000000.0))
+            user_p = float((user - old_user) / (refresh_rate * 10000000.0))
             point = {
                 "measurement": "process",
                 "tags": {
@@ -168,16 +176,7 @@ class MetricsDB:
 
         if "series" not in res.raw:
             return []
-
-        def _s():
-            return {
-                "kernel": 0,
-                "user": 0,
-                "residentSetSize": 0,
-                "virtualMemorySize": 0,
-            }
-
-        by_time = defaultdict(_s)
+        by_time = InfluxItems("kernel", "user", "residentSetSize", "virtualMemorySize")
         for i in res.raw["series"][0]["values"]:
             time = i[0]
             by_time[time]["kernel"] += i[1]
@@ -196,11 +195,7 @@ class MetricsDB:
         """
             % self.session_start
         )
-        # XXX should be in query
-        def make():
-            return {"duration": 0, "count": 0}
-
-        items = defaultdict(make)
+        items = InfluxItems("duration", "count")
         if "series" not in res.raw:
             return []
         for value in res.raw["series"][0]["values"]:
@@ -221,11 +216,8 @@ class MetricsDB:
         """
             % self.session_start
         )
-        # XXX should be in query
-        def make():
-            return {"heap": 0, "dom": 0, "audio": 0, "video": 0, "resources": 0}
 
-        items = defaultdict(make)
+        items = InfluxItems("heap", "dom", "audio", "video", "resources")
         if "series" not in res.raw:
             return []
         for value in res.raw["series"][0]["values"]:
@@ -243,11 +235,7 @@ class MetricsDB:
     # XXX convert in full influxdb query
     def get_top_io(self):
         p = self.client.query("select location, rx, tx from network_io")
-
-        def p_():
-            return {"rx": 0, "tx": 0}
-
-        hosts = defaultdict(p_)
+        hosts = InfluxItems("rx", "tx")
         for item in p["network_io"]:
             hosts[item["location"]]["rx"] += item["rx"]
             hosts[item["location"]]["tx"] += item["tx"]
@@ -283,11 +271,7 @@ class MetricsDB:
         )
         if "series" not in res.raw:
             return []
-        # XXX should be in query
-        def make():
-            return {"rx": 0, "tx": 0}
-
-        items = defaultdict(make)
+        items = InfluxItems("rx", "tx")
         for value in res.raw["series"][0]["values"]:
             items[value[0]]["tx"] += value[1]
             items[value[0]]["rx"] += value[2]
