@@ -41,8 +41,12 @@ async def plots(request):
 async def most_used(request):
     return web.json_response(db().get_proc_metrics())
 
+@routes.get('/firefox_mem_usage')
+async def f_mem(request):
+    return web.json_response(db().get_firefox_memory_metrics())
+
 @routes.get('/top_io')
-async def most_used(request):
+async def top_io(request):
     return web.json_response(db().get_top_io())
 
 

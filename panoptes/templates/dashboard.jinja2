@@ -55,13 +55,19 @@
           </div>
         </div>
 
-  <div class="column auto">
+      <div class="column auto">
             <div id="memory-container">
           </div>
         </div>
 
       </div>
       <div class="columns is-multiline">
+
+
+      <div class="column auto">
+          <div id="firefox-memory-container">
+        </div>
+        </div>
                <div class="column auto">
             <table class="table" id="top_io">
                <tr>
@@ -204,7 +210,7 @@ const loadData = () => {
       }
       const data = [firstTrace, secondTrace];
       const layout = {
-        title: 'I/O Activity (All FDs combined)',
+        title: 'I/O Activity (Socket+Files)',
         showlegend: false
       };
       io_graph = Plotly.newPlot('io-container', data, layout);
@@ -310,6 +316,71 @@ const loadData = () => {
       Plotly.newPlot('cpu-container', cpu_data, layout);
     })
     .catch( error => console.log(error));
+
+
+  fetch('/firefox_mem_usage')
+    .then( response => {
+      if (response.status !== 200) {
+        console.log(response);
+      }
+      return response;
+    })
+    .then(response => response.json())
+    .then(parsedResponse => {
+      const unpackData = (arr, key) => {
+        return arr.map(obj => obj[key])
+      }
+      const heap = {
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'JS GC Heap Usage',
+        x: unpackData(parsedResponse, 'time'),
+        y: unpackData(parsedResponse, 'heap'),
+        line: {color: '#17BECF'}
+      }
+      const audio = {
+        type: "scatter",
+        mode: "lines+markers",
+        name: 'Audio buffer',
+        x: unpackData(parsedResponse, 'time'),
+        y: unpackData(parsedResponse, 'audio'),
+        line: {color: '#7F7F7F'}
+      }
+      const video = {
+        type: "scatter",
+        mode: "lines+markers",
+        name: 'Video Buffer',
+        x: unpackData(parsedResponse, 'time'),
+        y: unpackData(parsedResponse, 'video'),
+        line: {color: '#8F8F8F'}
+      }
+      const dom = {
+        type: "scatter",
+        mode: "lines+markers",
+        name: 'DOM Size',
+        x: unpackData(parsedResponse, 'time'),
+        y: unpackData(parsedResponse, 'dom'),
+        line: {color: 'red'}
+      }
+      const resources = {
+        type: "scatter",
+        mode: "lines+markers",
+        name: 'Media Resources',
+        x: unpackData(parsedResponse, 'time'),
+        y: unpackData(parsedResponse, 'resources'),
+        line: {color: 'green'}
+      }
+      const firefox_mem_data = [heap, audio, video, resources, dom];
+      const layout = {
+        title: 'Firefox Memory Detailed Usage',
+        showlegend: false
+      };
+      Plotly.newPlot('firefox-memory-container', firefox_mem_data, layout);
+
+    })
+    .catch( error => console.log(error));
+
+
 }
 
 $(window).on('load', loadData);

@@ -13,13 +13,14 @@ with open(JS_SCRIPT) as f:
 
 _CAP = {"capabilities": {"alwaysMatch":
 
-    {"acceptInsecureCerts": True,
+    {
+     "acceptInsecureCerts": True,
      "moz:firefoxOptions": {
-#         "binary":
-#         "/Users/tarek/Dev/gecko/mozilla-central-talos/objdir-osx/dist/NightlyDebug.app/Contents/MacOS/firefox",
-#         "args": [
-#             #"-no-remote", "-foreground",
-#             "-profile", "profile-default"],
+         #"binary":
+         #"/Users/tarek/Dev/gecko/mozilla-central-talos/objdir-osx/dist/Nightly.app/Contents/MacOS/firefox",
+         #"args": [
+         #    "-no-remote", "-foreground",
+         #    "-profile", "profile-default"],
          "prefs": {
              "io.activity.enabled": True,
              }

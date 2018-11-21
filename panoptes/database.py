@@ -2,6 +2,8 @@ from influxdb import InfluxDBClient
 import random
 import datetime
 from collections import defaultdict
+import socket
+
 
 def now(hours=None):
     if hours is not None:
@@ -14,6 +16,7 @@ def now(hours=None):
 # crappy ad-hoc diff queries
 class MetricsDB:
     def __init__(self):
+        self.localhost = socket.gethostbyname(socket.gethostname())
         self.client = InfluxDBClient('localhost', 8086, 'root', 'root', 'gecko')
         self.client.create_database('gecko')
         def m_():
@@ -21,6 +24,7 @@ class MetricsDB:
 
         self.diffs = defaultdict(m_)
         self.pids_diffs = defaultdict(m_)
+        self.io_diffs = defaultdict(m_)
         self.measures = 0
 
     def reset_data(self):
@@ -69,15 +73,13 @@ class MetricsDB:
             location = item['location']
             if location.endswith('osfile_async_worker.js'):
                 continue
-            # marionette XXX
-            # XXX get the local IP to make this filter portable
-            if '192.168.1.' in location:
+            if self.localhost in location:
                 continue
             rx = item['rx']
             tx = item['tx']
-            old_rx, old_tx = self.diffs[location]
+            old_rx, old_tx = self.io_diffs[location]
             if self.measures == 1:
-                self.diffs[location] = rx, tx
+                self.io_diffs[location] = rx, tx
                 continue
 
             rx -= old_rx
@@ -86,19 +88,21 @@ class MetricsDB:
             tx -= old_tx
             if tx < 0:
                 tx = 0
-            self.diffs[location] = rx, tx
+
+            self.io_diffs[location] = old_rx + rx, old_tx + tx
             point = {"measurement": "network_io",
                      "tags": {"location": location},
                      "time": timestamp,
                      "fields": {"rx": rx, "tx": tx}
                     }
-            changed.append(location)
+            print("location %s, %d %d" % (location, rx, tx))
             points.append(point)
+            changed.append(location)
 
-        for location, __ in self.diffs.items():
-            if location in changed:
-                continue
-            self.diffs[location] = 0, 0
+        #for location, __ in self.io_diffs.items():
+        #    if location in changed:
+        #        continue
+        #    self.io_diffs[location] = 0, 0
 
         changed = []
         for item in metrics['value'].get('performance', []):
@@ -120,20 +124,40 @@ class MetricsDB:
             if duration < 0:
                 duration = 0
 
+            self.diffs[host] = count + old_count, duration + old_duration
             point = {"measurement": "performance",
                      "tags": {"host": host},
                      "time": timestamp,
                      "fields": {"duration_": duration,
                                 "dispatches": count}
                     }
-            self.diffs[host] = count, duration
+            points.append(point)
             changed.append(host)
+
+            heap = item['memoryInfo'].get('GCHeapUsage', 0)
+            domDom = item['memoryInfo'].get('domDom', 0)
+            domOther = item['memoryInfo'].get('domOther', 0)
+            domStyle = item['memoryInfo'].get('domStyle', 0)
+            dom = domDom + domOther + domStyle
+            audio = item['memoryInfo']['media'].get('audioSize', 0)
+            video = item['memoryInfo']['media'].get('videoSize', 0)
+            res = item['memoryInfo']['media'].get('resourcesSize', 0)
+
+            point = {"measurement": "firefox_memory",
+                     "tags": {"host": host},
+                     "time": timestamp,
+                     "fields": {"heap": heap,
+                                "dom": dom,
+                                "audio": audio,
+                                "video": video,
+                                "resources": res}
+                    }
             points.append(point)
 
-        for location, __ in self.diffs.items():
-            if location in changed:
-                continue
-            self.diffs[location] = 0, 0
+        #for host, __ in self.diffs.items():
+        #    if host in changed:
+        #        continue
+        #    self.diffs[host] = 0, 0
 
         print("Writing %d points" % len(points))
         return self.client.write_points(points)
@@ -182,6 +206,31 @@ class MetricsDB:
         for value in res.raw['series'][0]['values']:
             items[value[0]]['count'] += value[1]
             items[value[0]]['duration'] += (value[2] / 1000.)
+        res = []
+        for key, value in items.items():
+            value['time'] = key
+            res.append(value)
+        return res
+
+    def get_firefox_memory_metrics(self):
+        timestamp = now(24)  # XXX replace by uptime
+        res = self.client.query("""
+        select heap, dom, audio, video, resources from firefox_memory
+        where time > '%s'
+        group by heap, dom, audio, video, resources
+        """ % timestamp)
+        # XXX should be in query
+        def make():
+            return {'heap': 0, 'dom': 0, 'audio': 0, 'video': 0, 'resources': 0}
+        items = defaultdict(make)
+        if 'series' not in res.raw:
+            return []
+        for value in res.raw['series'][0]['values']:
+            items[value[0]]['heap'] += value[1]
+            items[value[0]]['dom'] += value[2]
+            items[value[0]]['audio'] += value[3]
+            items[value[0]]['video'] += value[4]
+            items[value[0]]['resources'] += value[5]
         res = []
         for key, value in items.items():
             value['time'] = key
