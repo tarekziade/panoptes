@@ -5,20 +5,13 @@ from collections import defaultdict
 import socket
 
 
-def now(hours=None):
-    if hours is not None:
-        res = datetime.datetime.now() - datetime.timedelta(hours=hours)
-    else:
-        res = datetime.datetime.now()
-    return res.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
 # crappy ad-hoc diff queries
 class MetricsDB:
     def __init__(self):
         self.localhost = socket.gethostbyname(socket.gethostname())
-        self.client = InfluxDBClient('localhost', 8086, 'root', 'root', 'gecko')
-        self.client.create_database('gecko')
+        self.client = InfluxDBClient("localhost", 8086, "root", "root", "gecko")
+        self.client.create_database("gecko")
+
         def m_():
             return [0, 0]
 
@@ -26,57 +19,61 @@ class MetricsDB:
         self.pids_diffs = defaultdict(m_)
         self.io_diffs = defaultdict(m_)
         self.measures = 0
+        self.session_start = None
 
     def reset_data(self):
-        self.client.drop_database('gecko')
-        self.client.create_database('gecko')
-        #self.client.query("delete from network_io;")
-        #self.client.query("delete from performance;")
-        #self.client.query("delete from process;")
+        self.client.drop_database("gecko")
+        self.client.create_database("gecko")
+        self.session_start = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
 
     def write_metrics(self, metrics):
         points = []
-        timestamp = now()
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         self.measures += 1
         refresh_rate = 60
-        proc_data = metrics['value'].get('proc', [])
+        proc_data = metrics["value"].get("proc", [])
         for item in proc_data:
-            kernel = item['cpuKernel']
-            user = item['cpuUser']
-            pid = item['pid']
+            kernel = item["cpuKernel"]
+            user = item["cpuUser"]
+            pid = item["pid"]
             old_kernel, old_user = self.pids_diffs[pid]
             if self.measures == 1:
                 self.pids_diffs[pid] = kernel, user
                 continue
 
             self.pids_diffs[pid] = kernel, user
-            kernel_p = (float)((kernel - old_kernel)/(refresh_rate*10000000.0))
-            user_p = (float)((user - old_user)/(refresh_rate*10000000.0));
-            point = {"measurement": "process",
-                    "tags": {"filename": item['filename'], 'type': item['type'],
-                             "childID": item.get('childID', -1)},
-                     "time": timestamp,
-                     "fields": {"cpuKernel": kernel_p,
-                                "cpuUser": user_p,
-                                "residentSetSize":
-                                int(item['residentSetSize']/1024./1024.),
-                                "virtualMemorySize":
-                                int(item['virtualMemorySize']/1024./1024.),
-                                "pid": pid
-                                }
-                    }
+            kernel_p = (float)((kernel - old_kernel) / (refresh_rate * 10000000.0))
+            user_p = (float)((user - old_user) / (refresh_rate * 10000000.0))
+            point = {
+                "measurement": "process",
+                "tags": {
+                    "filename": item["filename"],
+                    "type": item["type"],
+                    "childID": item.get("childID", -1),
+                },
+                "time": timestamp,
+                "fields": {
+                    "cpuKernel": kernel_p,
+                    "cpuUser": user_p,
+                    "residentSetSize": int(item["residentSetSize"] / 1024.0 / 1024.0),
+                    "virtualMemorySize": int(
+                        item["virtualMemorySize"] / 1024.0 / 1024.0
+                    ),
+                    "pid": pid,
+                },
+            }
             points.append(point)
 
-        io_data = metrics['value'].get('io', [])
+        io_data = metrics["value"].get("io", [])
         changed = []
         for item in io_data:
-            location = item['location']
-            if location.endswith('osfile_async_worker.js'):
+            location = item["location"]
+            if location.endswith("osfile_async_worker.js"):
                 continue
             if self.localhost in location:
                 continue
-            rx = item['rx']
-            tx = item['tx']
+            rx = item["rx"]
+            tx = item["tx"]
             old_rx, old_tx = self.io_diffs[location]
             if self.measures == 1:
                 self.io_diffs[location] = rx, tx
@@ -90,29 +87,25 @@ class MetricsDB:
                 tx = 0
 
             self.io_diffs[location] = old_rx + rx, old_tx + tx
-            point = {"measurement": "network_io",
-                     "tags": {"location": location},
-                     "time": timestamp,
-                     "fields": {"rx": rx, "tx": tx}
-                    }
+            point = {
+                "measurement": "network_io",
+                "tags": {"location": location},
+                "time": timestamp,
+                "fields": {"rx": rx, "tx": tx},
+            }
             print("location %s, %d %d" % (location, rx, tx))
             points.append(point)
             changed.append(location)
 
-        #for location, __ in self.io_diffs.items():
-        #    if location in changed:
-        #        continue
-        #    self.io_diffs[location] = 0, 0
-
         changed = []
-        for item in metrics['value'].get('performance', []):
+        for item in metrics["value"].get("performance", []):
             count = 0
-            for subitem in item['items']:
-                if subitem['category'] == 8:
+            for subitem in item["items"]:
+                if subitem["category"] == 8:
                     continue
-                count += subitem['count']
-            host = item['host']
-            duration = item['duration']
+                count += subitem["count"]
+            host = item["host"]
+            duration = item["duration"]
             if self.measures == 1:
                 self.diffs[host] = count, duration
                 continue
@@ -125,167 +118,186 @@ class MetricsDB:
                 duration = 0
 
             self.diffs[host] = count + old_count, duration + old_duration
-            point = {"measurement": "performance",
-                     "tags": {"host": host},
-                     "time": timestamp,
-                     "fields": {"duration_": duration,
-                                "dispatches": count}
-                    }
+            point = {
+                "measurement": "performance",
+                "tags": {"host": host},
+                "time": timestamp,
+                "fields": {"duration_": duration, "dispatches": count},
+            }
             points.append(point)
             changed.append(host)
 
-            heap = item['memoryInfo'].get('GCHeapUsage', 0)
-            domDom = item['memoryInfo'].get('domDom', 0)
-            domOther = item['memoryInfo'].get('domOther', 0)
-            domStyle = item['memoryInfo'].get('domStyle', 0)
+            heap = item["memoryInfo"].get("GCHeapUsage", 0)
+            domDom = item["memoryInfo"].get("domDom", 0)
+            domOther = item["memoryInfo"].get("domOther", 0)
+            domStyle = item["memoryInfo"].get("domStyle", 0)
             dom = domDom + domOther + domStyle
-            audio = item['memoryInfo']['media'].get('audioSize', 0)
-            video = item['memoryInfo']['media'].get('videoSize', 0)
-            res = item['memoryInfo']['media'].get('resourcesSize', 0)
+            audio = item["memoryInfo"]["media"].get("audioSize", 0)
+            video = item["memoryInfo"]["media"].get("videoSize", 0)
+            res = item["memoryInfo"]["media"].get("resourcesSize", 0)
 
-            point = {"measurement": "firefox_memory",
-                     "tags": {"host": host},
-                     "time": timestamp,
-                     "fields": {"heap": heap,
-                                "dom": dom,
-                                "audio": audio,
-                                "video": video,
-                                "resources": res}
-                    }
+            point = {
+                "measurement": "firefox_memory",
+                "tags": {"host": host},
+                "time": timestamp,
+                "fields": {
+                    "heap": heap,
+                    "dom": dom,
+                    "audio": audio,
+                    "video": video,
+                    "resources": res,
+                },
+            }
             points.append(point)
-
-        #for host, __ in self.diffs.items():
-        #    if host in changed:
-        #        continue
-        #    self.diffs[host] = 0, 0
 
         print("Writing %d points" % len(points))
         return self.client.write_points(points)
 
     def get_proc_metrics(self):
-
-        timestamp = now(24)
-        res = self.client.query("""
+        res = self.client.query(
+            """
     select
         cpuKernel,
         cpuUser,
         residentSetSize,
         virtualMemorySize from process
-    where time > '%s'
-                    """ % (timestamp))
+    where time >= '%s'
+                    """
+            % (self.session_start)
+        )
 
-
-        if 'series' not in res.raw:
+        if "series" not in res.raw:
             return []
+
         def _s():
-            return {'kernel': 0, 'user':0, 'residentSetSize':0 ,
-                    'virtualMemorySize':0}
+            return {
+                "kernel": 0,
+                "user": 0,
+                "residentSetSize": 0,
+                "virtualMemorySize": 0,
+            }
+
         by_time = defaultdict(_s)
-        for i in res.raw['series'][0]['values']:
+        for i in res.raw["series"][0]["values"]:
             time = i[0]
-            by_time[time]['kernel'] += i[1]
-            by_time[time]['user'] += i[2]
-            by_time[time]['residentSetSize'] += i[3]
-            by_time[time]['virtualMemorySize'] += i[4]
-            by_time[time]['time'] = time
+            by_time[time]["kernel"] += i[1]
+            by_time[time]["user"] += i[2]
+            by_time[time]["residentSetSize"] += i[3]
+            by_time[time]["virtualMemorySize"] += i[4]
+            by_time[time]["time"] = time
         return list(by_time.values())
 
     def get_perf_metrics(self):
-        timestamp = now(24)  # XXX replace by uptime
-        res = self.client.query("""
+        res = self.client.query(
+            """
         select dispatches, duration_ from performance
-        where time > '%s'
+        where time >= '%s'
         group by dispatches, duration_
-        """ % timestamp)
+        """
+            % self.session_start
+        )
         # XXX should be in query
         def make():
-            return {'duration': 0, 'count': 0}
+            return {"duration": 0, "count": 0}
+
         items = defaultdict(make)
-        if 'series' not in res.raw:
+        if "series" not in res.raw:
             return []
-        for value in res.raw['series'][0]['values']:
-            items[value[0]]['count'] += value[1]
-            items[value[0]]['duration'] += (value[2] / 1000.)
+        for value in res.raw["series"][0]["values"]:
+            items[value[0]]["count"] += value[1]
+            items[value[0]]["duration"] += value[2] / 1000.0
         res = []
         for key, value in items.items():
-            value['time'] = key
+            value["time"] = key
             res.append(value)
         return res
 
     def get_firefox_memory_metrics(self):
-        timestamp = now(24)  # XXX replace by uptime
-        res = self.client.query("""
+        res = self.client.query(
+            """
         select heap, dom, audio, video, resources from firefox_memory
-        where time > '%s'
+        where time >= '%s'
         group by heap, dom, audio, video, resources
-        """ % timestamp)
+        """
+            % self.session_start
+        )
         # XXX should be in query
         def make():
-            return {'heap': 0, 'dom': 0, 'audio': 0, 'video': 0, 'resources': 0}
+            return {"heap": 0, "dom": 0, "audio": 0, "video": 0, "resources": 0}
+
         items = defaultdict(make)
-        if 'series' not in res.raw:
+        if "series" not in res.raw:
             return []
-        for value in res.raw['series'][0]['values']:
-            items[value[0]]['heap'] += value[1]
-            items[value[0]]['dom'] += value[2]
-            items[value[0]]['audio'] += value[3]
-            items[value[0]]['video'] += value[4]
-            items[value[0]]['resources'] += value[5]
+        for value in res.raw["series"][0]["values"]:
+            items[value[0]]["heap"] += value[1]
+            items[value[0]]["dom"] += value[2]
+            items[value[0]]["audio"] += value[3]
+            items[value[0]]["video"] += value[4]
+            items[value[0]]["resources"] += value[5]
         res = []
         for key, value in items.items():
-            value['time'] = key
+            value["time"] = key
             res.append(value)
         return res
 
     # XXX convert in full influxdb query
     def get_top_io(self):
         p = self.client.query("select location, rx, tx from network_io")
+
         def p_():
-            return {'rx': 0, 'tx': 0}
+            return {"rx": 0, "tx": 0}
+
         hosts = defaultdict(p_)
-        for item in p['network_io']:
-            hosts[item['location']]['rx'] += item['rx']
-            hosts[item['location']]['tx'] += item['tx']
+        for item in p["network_io"]:
+            hosts[item["location"]]["rx"] += item["rx"]
+            hosts[item["location"]]["tx"] += item["tx"]
+
         def _s(host):
-            if not host.startswith('file'):
+            if not host.startswith("file"):
                 return host
-            return host.split('/')[-1]
-        data = [[data['rx'], data['tx'], _s(host)] for host, data in hosts.items()
-                if data['rx'] > 0 or
-                data['tx'] > 0]
+            return host.split("/")[-1]
+
+        data = [
+            [data["rx"], data["tx"], _s(host)]
+            for host, data in hosts.items()
+            if data["rx"] > 0 or data["tx"] > 0
+        ]
 
         def _by_read(item):
-            return -(item[0]+item[1])
+            return -(item[0] + item[1])
 
         data.sort(key=_by_read)
 
-        return [{'rx': item[0],
-                 'tx': item[1],
-                 'location': item[2]}
-                 for item in data[:5]]
+        return [
+            {"rx": item[0], "tx": item[1], "location": item[2]} for item in data[:5]
+        ]
 
     def get_io_metrics(self):
-        timestamp = now(24)
-        res = self.client.query("""
+        res = self.client.query(
+            """
         select rx, tx from network_io
-        where time > '%s'
+        where time >= '%s'
         group by rx, tx
-        """ % timestamp)
-        if 'series' not in res.raw:
+        """
+            % self.session_start
+        )
+        if "series" not in res.raw:
             return []
         # XXX should be in query
         def make():
-            return {'rx': 0, 'tx': 0}
+            return {"rx": 0, "tx": 0}
+
         items = defaultdict(make)
-        for value in res.raw['series'][0]['values']:
-            items[value[0]]['tx'] += value[1]
-            items[value[0]]['rx'] += value[2]
+        for value in res.raw["series"][0]["values"]:
+            items[value[0]]["tx"] += value[1]
+            items[value[0]]["rx"] += value[2]
         res = []
         for key, value in items.items():
-            value['time'] = key
+            value["time"] = key
             res.append(value)
         return res
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     m = MetricsDB()
     m.write_metrics()
