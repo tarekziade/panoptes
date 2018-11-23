@@ -16,7 +16,8 @@ _CAP = {
                 # "args": [
                 #    "-no-remote", "-foreground",
                 #    "-profile", "profile-default"],
-                "prefs": {"io.activity.enabled": True}
+                "prefs": {"io.activity.enabled": True,
+                          "media.autoplay.default": 0}
             },
         }
     }
@@ -91,7 +92,15 @@ class GeckoClient:
         data = {"url": url}
         async with self.session_call("POST", "/url", json=data) as resp:
             res = await resp.json()
-            print(res)
+            assert resp.status == 200
+        return res
+
+    async def screenshot(self):
+        data = {"context": "content"}
+        async with self.session_call("POST", "/moz/context", json=data) as resp:
+            assert resp.status == 200
+        async with self.session_call("GET", "/moz/screenshot/full") as resp:
+            res = await resp.json()
             assert resp.status == 200
         return res
 

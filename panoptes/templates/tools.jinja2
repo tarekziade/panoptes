@@ -26,11 +26,35 @@
             </p>
             <div class="panel-block">
                 <form action="/visit_url" method="post" enctype="multipart/form-data">
-                    <input type="text" name="url" value="http://mozilla.org" />
-                    <input type="submit">Visit</input>
+<div class="field">
+                <input  class="input" type="text" name="url" value="http://mozilla.org" />
+</div>
+                <div class="field is-grouped">
+                <div class="control">
+                  <button class="button is-link">Visit</button>
+                </div>
+               </div>
                 </form>
             </div>
         </div>
+    </div>
+    <div class="column auto">
+      <div class="panel">
+        <p class="panel-heading">Screenshot</p>
+        <div class="panel-block">
+
+                <div class="field is-grouped">
+                <div class="control">
+          <form action="/take_screenshot">
+            <button class="button is-link">Take Screenshot</button>
+          </form>
+          </div>
+</div>
+</div>
+<div class="panel-block">
+          <img src="/static/screenshot.png?cache={{cache}}"/>
+        </div>
+      </div>
     </div>
 <div>
 {% endblock %}

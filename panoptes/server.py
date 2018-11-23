@@ -1,5 +1,7 @@
 from aiohttp import web
 import asyncio
+import base64
+import random
 
 # from panoptes.driver import start_session, stop_session
 from aiohttp_jinja2 import setup, template
@@ -38,7 +40,7 @@ async def dashboard(request):
 @routes.get("/tools")
 @template("tools.jinja2")
 async def tools(request):
-    return {}
+    return {'cache': random.randint(1, 999)}
 
 
 @routes.get("/io_usage")
@@ -98,6 +100,16 @@ async def visit_url(request):
         await asyncio.sleep(5)
     data = await request.post()
     resp = await app.gecko.visit_url(data["url"])
+    return web.HTTPFound(location="/tools")
+
+
+@routes.get("/take_screenshot")
+async def screenshot(request):
+    if app.gecko is not None:
+        resp = await app.gecko.screenshot()
+        img = base64.b64decode(resp['value'])
+        with open(os.path.join(here, 'static', 'screenshot.png'), 'wb') as f:
+            f.write(img)
     return web.HTTPFound(location="/tools")
 
 
