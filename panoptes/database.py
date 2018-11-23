@@ -162,6 +162,10 @@ class MetricsDB:
         return self.client.write_points(points)
 
     def get_proc_metrics(self):
+
+        if self.session_start is None:
+            return []
+
         res = self.client.query(
             """
     select
@@ -187,6 +191,9 @@ class MetricsDB:
         return list(by_time.values())
 
     def get_perf_metrics(self):
+        if self.session_start is None:
+            return []
+
         res = self.client.query(
             """
         select dispatches, duration_ from performance
@@ -208,6 +215,10 @@ class MetricsDB:
         return res
 
     def get_firefox_memory_metrics(self):
+
+        if self.session_start is None:
+            return []
+
         res = self.client.query(
             """
         select heap, dom, audio, video, resources from firefox_memory
@@ -234,6 +245,10 @@ class MetricsDB:
 
     # XXX convert in full influxdb query
     def get_top_io(self):
+
+        if self.session_start is None:
+            return []
+
         p = self.client.query("select location, rx, tx from network_io")
         hosts = InfluxItems("rx", "tx")
         for item in p["network_io"]:
@@ -261,6 +276,10 @@ class MetricsDB:
         ]
 
     def get_io_metrics(self):
+
+        if self.session_start is None:
+            return []
+
         res = self.client.query(
             """
         select rx, tx from network_io

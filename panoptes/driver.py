@@ -80,14 +80,20 @@ class GeckoClient:
         self.capabilities = None
 
     def get_timeline(self):
-        return self.actions
+        return [{"time": time, "action": action} for action, time in self.actions]
 
     async def visit_url(self, url):
+
         self.actions.append(("visit_url", now()))
+        data = {"context": "content"}
+        async with self.session_call("POST", "/moz/context", json=data) as resp:
+            assert resp.status == 200
         data = {"url": url}
         async with self.session_call("POST", "/url", json=data) as resp:
+            res = await resp.json()
+            print(res)
             assert resp.status == 200
-            return await resp.json()
+        return res
 
     async def get_metrics(self):
         data = {"context": "chrome"}

@@ -34,6 +34,12 @@ async def dashboard(request):
     return {}
 
 
+@routes.get("/tools")
+@template("tools.jinja2")
+async def tools(request):
+    return {}
+
+
 @routes.get("/io_usage")
 async def plots(request):
     return web.json_response(db().get_io_metrics())
@@ -57,7 +63,7 @@ async def top_io(request):
 @routes.get("/timeline")
 async def timeline(request):
     if app.gecko is None:
-        return []
+        return web.json_response([])
     return web.json_response(app.gecko.get_timeline())
 
 
@@ -83,9 +89,9 @@ async def start_session(request):
 
 @routes.post("/visit_url")
 async def visit_url(request):
-    data = await request.json()
+    data = await request.post()
     resp = await app.gecko.visit_url(data["url"])
-    return web.json_response(resp)
+    return web.HTTPFound(location="/tools")
 
 
 logging.basicConfig(level=logging.DEBUG)

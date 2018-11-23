@@ -1,0 +1,43 @@
+{% extends "base.jinja2" %}
+
+{% block content %}
+
+<div class="columns">
+    <div class="column auto">
+        <div class="panel">
+            <p class="panel-heading">
+                Timeline
+            </p>
+            <div class="panel-block">
+                <table class="table" id="timeline">
+                    <tr>
+                        <th>When</th>
+                        <th>Action</th>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="column auto">
+        <div class="panel">
+            <p class="panel-heading">
+                Visit URL
+            </p>
+            <div class="panel-block">
+                <form action="/visit_url" method="post" enctype="multipart/form-data">
+                    <input type="text" name="url" value="http://mozilla.org" />
+                    <input type="submit">Visit</input>
+                </form>
+            </div>
+        </div>
+    </div>
+<div>
+{% endblock %}
+
+{% block script %}
+<script>
+$(window).on('load', refreshTimeline);
+window.setInterval(refreshTimeline, 60000);
+</script>
+{% endblock %}

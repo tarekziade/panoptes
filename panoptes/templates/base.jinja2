@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang='en' class=''>
+<head>
+    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/bulma/0.4.0/css/bu
+lma.css'>
+    <style class="cp-pen-styles"></style>
+</head>
+
+<body>
+
+    <header class="hero is-light">
+        <div class="hero-head">
+            <nav class="nav has-shadow">
+                <div class="nav-left">
+                    <a class="nav-item is-tab is-active" href="/">Panoptes</a>
+                    <a class="nav-item is-tab is-hidden-mobile" href="/tools">Tools</a>
+                </div>
+                <span class="nav-toggle">
+        <span></span>
+                <span></span>
+                <span></span>
+                </span>
+                <div class="nav-right nav-menu">
+                    <a class="nav-item is-tab">Log out</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <div class="section">{% block content %}{% endblock %}</div>
+
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="/static/panoptes.js"></script>
+    {% block script %}{% endblock %}
+
+</body>
+
+</html>
