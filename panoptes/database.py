@@ -80,6 +80,8 @@ class MetricsDB:
                 continue
             if self.localhost in location:
                 continue
+            if 'socket' in location:
+                print(location)
             rx = item["rx"]
             tx = item["tx"]
             old_rx, old_tx = self.io_diffs[location]
