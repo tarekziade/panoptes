@@ -41,6 +41,9 @@ class GeckoClient:
         self.metrics_interval = metrics_interval
         self.started_at = None
 
+    def started(self):
+        return self.started_at is not None
+
     def get_uptime(self):
         if self.started_at is None:
             return
@@ -83,7 +86,6 @@ class GeckoClient:
         return [{"time": time, "action": action} for action, time in self.actions]
 
     async def visit_url(self, url):
-
         self.actions.append(("visit_url", now()))
         data = {"context": "content"}
         async with self.session_call("POST", "/moz/context", json=data) as resp:

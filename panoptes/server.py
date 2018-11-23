@@ -1,4 +1,5 @@
 from aiohttp import web
+import asyncio
 
 # from panoptes.driver import start_session, stop_session
 from aiohttp_jinja2 import setup, template
@@ -89,6 +90,12 @@ async def start_session(request):
 
 @routes.post("/visit_url")
 async def visit_url(request):
+    if app.gecko is None or not app.gecko.started:
+        if app.gecko is None:
+            app.gecko = GeckoClient()
+        await app.gecko.start(get_metrics)
+        db().reset_data()
+        await asyncio.sleep(5)
     data = await request.post()
     resp = await app.gecko.visit_url(data["url"])
     return web.HTTPFound(location="/tools")
