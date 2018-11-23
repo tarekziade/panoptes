@@ -4,13 +4,6 @@ import aiohttp
 import asyncio
 
 
-def now():
-    return datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-
-def human_now():
-    return datetime.datetime.now().strftime("%H:%M %m/%d/%Y")
-
-
 JS_SCRIPT = os.path.join(os.path.dirname(__file__), "metricsCollector.js")
 with open(JS_SCRIPT) as f:
     metrics_script = f.read()
@@ -20,8 +13,6 @@ _CAP = {
         "alwaysMatch": {
             "acceptInsecureCerts": True,
             "moz:firefoxOptions": {
-                # "binary":
-                # "/Users/tarek/Dev/gecko/mozilla-central-talos/objdir-osx/dist/Nightly.app/Contents/MacOS/firefox",
                 # "args": [
                 #    "-no-remote", "-foreground",
                 #    "-profile", "profile-default"],
@@ -45,7 +36,8 @@ class GeckoClient:
         self.started_at = None
 
     def add_action(self, msg):
-        self.actions.append((msg, human_now()))
+        when = datetime.datetime.now().strftime("%H:%M %m/%d/%Y")
+        self.actions.append((msg, when))
 
     def started(self):
         return self.started_at is not None
@@ -92,7 +84,7 @@ class GeckoClient:
         return [{"time": time, "action": action} for action, time in self.actions]
 
     async def visit_url(self, url):
-        self.add_action("Loaded %s" % url, now())
+        self.add_action("Loaded %s" % url)
         data = {"context": "content"}
         async with self.session_call("POST", "/moz/context", json=data) as resp:
             assert resp.status == 200
