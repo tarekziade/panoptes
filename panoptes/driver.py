@@ -13,9 +13,11 @@ _CAP = {
         "alwaysMatch": {
             "acceptInsecureCerts": True,
             "moz:firefoxOptions": {
-                # "args": [
+                 "args": [
+                     "-headless",
                 #    "-no-remote", "-foreground",
-                #    "-profile", "profile-default"],
+                #    "-profile", "profile-default"
+                ],
                 "prefs": {"io.activity.enabled": True,
                           "media.autoplay.default": 0}
             },
