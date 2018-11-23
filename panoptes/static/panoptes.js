@@ -281,3 +281,28 @@ function refreshDashboard() {
         })
         .catch(error => console.log(error));
 }
+
+function refreshTimeline() {
+
+    fetch('/timeline')
+        .then(response => {
+            if (response.status !== 200) {
+                console.log(response);
+            }
+            return response;
+        })
+        .then(response => response.json())
+        .then(parsedResponse => {
+            var table = document.getElementById("timeline");
+            for (var x = table.rows.length - 1; x > 0; x--) {
+                table.deleteRow(x);
+            }
+            let i = 0;
+            parsedResponse.forEach(function(item) {
+                var row = table.insertRow(i + 1);
+                row.insertCell(0).innerHTML = item.time;
+                row.insertCell(1).innerHTML = item.action;
+                i++;
+            });
+        });
+}

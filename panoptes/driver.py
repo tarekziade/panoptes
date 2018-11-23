@@ -7,6 +7,9 @@ import asyncio
 def now():
     return datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
 
+def human_now():
+    return datetime.datetime.now().strftime("%H:%M %m/%d/%Y")
+
 
 JS_SCRIPT = os.path.join(os.path.dirname(__file__), "metricsCollector.js")
 with open(JS_SCRIPT) as f:
@@ -41,6 +44,9 @@ class GeckoClient:
         self.metrics_interval = metrics_interval
         self.started_at = None
 
+    def add_action(self, msg):
+        self.actions.append((msg, human_now()))
+
     def started(self):
         return self.started_at is not None
 
@@ -60,7 +66,7 @@ class GeckoClient:
         return meth(self.session_url + path, json=json)
 
     async def start(self, metrics_cb=None):
-        self.actions.append(("start", now()))
+        self.add_action("Session Started")
         async with self.session.post(self.host + "/session", json=_CAP) as resp:
             data = await resp.json()
             if resp.status != 200:
@@ -76,7 +82,7 @@ class GeckoClient:
         return self.session_id
 
     async def stop(self):
-        self.actions.append(("stop", now()))
+        self.add_action("Session Stopped")
         async with self.session.delete(self.session_url) as resp:
             assert resp.status == 200
         self.session_id = None
@@ -86,7 +92,7 @@ class GeckoClient:
         return [{"time": time, "action": action} for action, time in self.actions]
 
     async def visit_url(self, url):
-        self.actions.append(("visit_url", now()))
+        self.add_action("Loaded %s" % url, now())
         data = {"context": "content"}
         async with self.session_call("POST", "/moz/context", json=data) as resp:
             assert resp.status == 200
