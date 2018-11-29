@@ -77,6 +77,16 @@ async def timeline(request):
     return web.json_response(await app.gecko.get_support())
 
 
+@routes.get("/firefox_version")
+async def version(request):
+    if app.gecko is None:
+        return web.json_response({'version': ''})
+    info = await app.gecko.get_support()
+    info = info['value']['application']
+    version = '%(name)s %(updateChannel)s %(version)s' % info
+    return web.json_response({'version': version})
+
+
 @routes.get("/perf_usage")
 async def plots2(request):
     if app.gecko is None:

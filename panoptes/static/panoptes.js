@@ -314,6 +314,20 @@ function refreshDashboard() {
             Plotly.newPlot('firefox-memory-container', firefox_mem_data, layout);
         })
         .catch(error => console.log(error));
+
+
+    fetch('/firefox_version')
+        .then(response => {
+            if (response.status !== 200) {
+                console.log(response);
+            }
+            return response;
+        })
+        .then(response => response.json())
+        .then(parsedResponse => {
+            var title = document.getElementById("version");
+            title.innerHTML = parsedResponse.version;
+        });
 }
 
 function refreshTimeline() {
