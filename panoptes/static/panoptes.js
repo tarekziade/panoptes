@@ -44,6 +44,10 @@ function secondsToStr(data) {
     return 'just now';
 }
 
+function unpackData(arr, key) {
+  return arr.map(obj => obj[key]);
+}
+
 function refreshDashboard() {
     fetch('/perf_usage')
         .then(response => {
@@ -54,15 +58,36 @@ function refreshDashboard() {
         })
         .then(response => response.json())
         .then(parsedResponse => {
-            const unpackData = (arr, key) => {
-                return arr.map(obj => obj[key])
+            let perfData = parsedResponse.perf;
+            let xData = unpackData(perfData, 'time');
+            let yData = unpackData(perfData, 'count');
+            let timeLine = parsedResponse.timeline;
+            let annotations = [];
+
+            for (var x = timeLine.length - 1; x > 0; x--) {
+                let ay = -40;
+                if (x % 2 == 0) {
+                  ay = -80;
+                }
+
+                let item = {x: timeLine[x].time,
+                            y: 0,
+                            xref: 'x',
+                            yref: 'y',
+                            text: timeLine[x].action,
+                            showarrow: true,
+                            arrowhead: 30,
+                            ax: -30,
+                            ay: ay
+                };
+                annotations.push(item);
             }
             const firstTrace = {
                 type: 'scatter',
                 mode: 'lines+markers',
                 name: 'Dispatches',
-                x: unpackData(parsedResponse, 'time'),
-                y: unpackData(parsedResponse, 'count'),
+                x: xData,
+                y: yData,
                 line: {
                     color: '#17BECF'
                 }
@@ -71,16 +96,18 @@ function refreshDashboard() {
                 type: "scatter",
                 mode: "lines+markers",
                 name: 'Duration (ms)',
-                x: unpackData(parsedResponse, 'time'),
-                y: unpackData(parsedResponse, 'duration'),
+                x: unpackData(perfData, 'time'),
+                y: unpackData(perfData, 'duration'),
                 line: {
                     color: '#7F7F7F'
                 }
             }
+
             const data = [firstTrace, secondTrace];
             const layout = {
                 title: 'Quantum Scheduler Activity',
-                showlegend: false
+                showlegend: false,
+                annotations: annotations,
             };
             perf_graph = Plotly.newPlot('perf-container', data, layout);
             return perf_graph;
@@ -95,9 +122,6 @@ function refreshDashboard() {
         })
         .then(response => response.json())
         .then(parsedResponse => {
-            const unpackData = (arr, key) => {
-                return arr.map(obj => obj[key])
-            }
             const firstTrace = {
                 type: 'scatter',
                 mode: 'lines+markers',
@@ -169,9 +193,6 @@ function refreshDashboard() {
         })
         .then(response => response.json())
         .then(parsedResponse => {
-            const unpackData = (arr, key) => {
-                return arr.map(obj => obj[key])
-            }
             const firstTrace = {
                 type: 'scatter',
                 mode: 'lines+markers',
@@ -235,9 +256,6 @@ function refreshDashboard() {
         })
         .then(response => response.json())
         .then(parsedResponse => {
-            const unpackData = (arr, key) => {
-                return arr.map(obj => obj[key])
-            }
             const heap = {
                 type: 'scatter',
                 mode: 'lines+markers',

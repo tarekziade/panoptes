@@ -79,7 +79,11 @@ async def timeline(request):
 
 @routes.get("/perf_usage")
 async def plots2(request):
-    return web.json_response(db().get_perf_metrics())
+    if app.gecko is None:
+        return web.json_response({'perf': [], 'timeline': []})
+    result = {'perf': db().get_perf_metrics(),
+              'timeline': app.gecko.get_timeline(human=False)}
+    return web.json_response(result)
 
 
 @routes.get("/uptime")

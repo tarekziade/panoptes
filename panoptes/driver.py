@@ -43,8 +43,17 @@ class GeckoClient:
         self.started_at = None
 
     def add_action(self, msg):
-        when = datetime.datetime.now().strftime("%H:%M %m/%d/%Y")
+        when = datetime.datetime.now()
         self.actions.append((msg, when))
+
+    def get_timeline(self, human=True):
+        def _format(t):
+            if human:
+                return t.strftime("%H:%M %m/%d/%Y")
+            return t.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        return [{"time": _format(time), "action": action}
+                for action, time in self.actions]
 
     def started(self):
         return self.started_at is not None
@@ -86,9 +95,6 @@ class GeckoClient:
             assert resp.status == 200
         self.session_id = None
         self.capabilities = None
-
-    def get_timeline(self):
-        return [{"time": time, "action": action} for action, time in self.actions]
 
     async def visit_url(self, url):
         self.add_action("Loaded %s" % url)
