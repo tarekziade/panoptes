@@ -8,6 +8,10 @@ JS_SCRIPT = os.path.join(os.path.dirname(__file__), "metricsCollector.js")
 with open(JS_SCRIPT) as f:
     metrics_script = f.read()
 
+JS_SCRIPT = os.path.join(os.path.dirname(__file__), "dumpSupport.js")
+with open(JS_SCRIPT) as f:
+    support_script = f.read()
+
 _CAP = {
     "capabilities": {
         "alwaysMatch": {
@@ -111,6 +115,15 @@ class GeckoClient:
         async with self.session_call("POST", "/moz/context", json=data) as resp:
             assert resp.status == 200
         data = {"script": metrics_script, "args": []}
+        async with self.session_call("POST", "/execute/sync", json=data) as resp:
+            assert resp.status == 200
+            return await resp.json()
+
+    async def get_support(self):
+        data = {"context": "chrome"}
+        async with self.session_call("POST", "/moz/context", json=data) as resp:
+            assert resp.status == 200
+        data = {"script": support_script, "args": []}
         async with self.session_call("POST", "/execute/sync", json=data) as resp:
             assert resp.status == 200
             return await resp.json()

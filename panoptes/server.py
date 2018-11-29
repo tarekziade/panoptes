@@ -70,6 +70,13 @@ async def timeline(request):
     return web.json_response(app.gecko.get_timeline())
 
 
+@routes.get("/about_support")
+async def timeline(request):
+    if app.gecko is None:
+        return web.json_response([])
+    return web.json_response(await app.gecko.get_support())
+
+
 @routes.get("/perf_usage")
 async def plots2(request):
     return web.json_response(db().get_perf_metrics())
