@@ -20,6 +20,8 @@ async def write_metrics(db, data):
     db.write_metrics(data)
 
 async def run_scenario(url):
+    # TODO context lib to start/stop geckodriver
+    #
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, callback=bye)
     log("Starting geckodriver")
