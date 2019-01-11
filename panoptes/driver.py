@@ -42,6 +42,9 @@ class GeckoClient:
         self.metrics_interval = metrics_interval
         self.started_at = None
 
+    async def close(self):
+        await self.session.close()
+
     def add_action(self, msg):
         when = datetime.datetime.now()
         self.actions.append((msg, when))

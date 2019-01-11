@@ -2,6 +2,10 @@ import sys
 import asyncio
 import signal
 import functools
+import pdb
+from concurrent.futures import CancelledError
+
+from async_generator import asynccontextmanager
 
 from panoptes.driver import GeckoClient
 from panoptes.database import MetricsDB
@@ -11,31 +15,72 @@ loop = asyncio.get_event_loop()
 def log(msg):
     print(msg)
 
+_MACH = '/Users/tarek/Dev/gecko/mozilla-central-opt/mach'
+_GECKO = None
 
-def bye():
-    loop.stop()
+
+@asynccontextmanager
+async def geckodriver():
+    global _GECKO
+    log("Starting geckodriver")
+    _GECKO = await asyncio.create_subprocess_exec(*[_MACH, "geckodriver"])
+    #stdout=asyncio.subprocess.PIPE)
+    try:
+        await asyncio.sleep(5)
+        yield _GECKO
+    finally:
+        await _kill_gecko()
+
+
+async def _kill_gecko():
+    global _GECKO
+    if _GECKO is None:
+        return
+    log("Terminating geckodriver")
+    try:
+        _GECKO.terminate()
+    except ProcessLookupError:
+        pass
+    else:
+        await _GECKO.wait()
+        try:
+            _GECKO.kill()
+        except ProcessLookupError:
+            pass
+    _GECKO = None
+    for task in asyncio.Task.all_tasks():
+        task.cancel()
+
+
+def bye(geckoclient, database):
+    loop.create_task(geckoclient.close())
+    loop.create_task(_kill_gecko())
 
 async def write_metrics(db, data):
     log(data)
     db.write_metrics(data)
 
-async def run_scenario(url):
-    # TODO context lib to start/stop geckodriver
-    #
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(sig, callback=bye)
-    log("Starting geckodriver")
-    gecko = GeckoClient()
-    db = MetricsDB()
-    await gecko.start(functools.partial(write_metrics, db))
-    log("Emptying any existing data")
-    db.reset_data()
-    await asyncio.sleep(5)
-    log("Visiting %s" % url)
-    resp = await gecko.visit_url(url)
-    # TODO make the script re-startable.
-    log("Collect data for one hour")
-    await asyncio.sleep(3600)
+async def run_scenario(url, collect_time=3600):
+    async with geckodriver():
+        gecko = GeckoClient()
+        db = MetricsDB()
+
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            loop.add_signal_handler(sig, callback=functools.partial(bye, gecko,
+                db))
+
+        await gecko.start(functools.partial(write_metrics, db))
+        log("Emptying any existing data")
+        db.reset_data()
+        await asyncio.sleep(5)
+        log("Visiting %s" % url)
+        resp = await gecko.visit_url(url)
+        # TODO make the script re-startable.
+        log("Collect data for %s seconds" % collect_time)
+        await asyncio.sleep(collect_time)
+
+    await gecko.close()
+
     # TODO analyze the data
     # TODO generate a report
 
@@ -45,8 +90,15 @@ if __name__ == "__main__":
         url = sys.argv[1]
     else:
         url = 'https://ziade.org'
+
+    if len(sys.argv) > 2:
+        collect_time = int(sys.argv[2])
+    else:
+        collect_time = 3600
     try:
-        loop.run_until_complete(run_scenario(url))
+        loop.run_until_complete(run_scenario(url, collect_time))
+    except CancelledError:
+        pass
     finally:
         if not loop.is_closed():
             loop.close()
