@@ -34,43 +34,49 @@ class MetricsDB:
         self.client.create_database("gecko")
         self.session_start = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
 
+    def _extract_point(self, item, timestamp):
+        refresh_rate = 60
+        kernel = item["cpuKernel"]
+        user = item["cpuUser"]
+        pid = item["pid"]
+        old_kernel, old_user = self.pids_diffs[pid]
+        if self.measures == 1:
+            self.pids_diffs[pid] = kernel, user
+            return None
+        self.pids_diffs[pid] = kernel, user
+        kernel_p = float((kernel - old_kernel) / (refresh_rate * 10000000.0))
+        user_p = float((user - old_user) / (refresh_rate * 10000000.0))
+        return {
+            "measurement": "process",
+            "tags": {
+                "filename": item["filename"],
+                "type": item["type"],
+                "childID": item.get("childID", -1),
+            },
+            "time": timestamp,
+            "fields": {
+                "cpuKernel": kernel_p,
+                "cpuUser": user_p,
+                "residentSetSize": int(item["residentSetSize"] / 1024.0 / 1024.0),
+                "virtualMemorySize": int(item["virtualMemorySize"] / 1024.0 / 1024.0),
+                "pid": pid,
+            },
+        }
+
     def write_metrics(self, metrics):
         points = []
         timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         self.measures += 1
-        refresh_rate = 60
         proc_data = metrics["value"].get("proc", [])
-        for item in proc_data:
-            kernel = item["cpuKernel"]
-            user = item["cpuUser"]
-            pid = item["pid"]
-            old_kernel, old_user = self.pids_diffs[pid]
-            if self.measures == 1:
-                self.pids_diffs[pid] = kernel, user
-                continue
-
-            self.pids_diffs[pid] = kernel, user
-            kernel_p = float((kernel - old_kernel) / (refresh_rate * 10000000.0))
-            user_p = float((user - old_user) / (refresh_rate * 10000000.0))
-            point = {
-                "measurement": "process",
-                "tags": {
-                    "filename": item["filename"],
-                    "type": item["type"],
-                    "childID": item.get("childID", -1),
-                },
-                "time": timestamp,
-                "fields": {
-                    "cpuKernel": kernel_p,
-                    "cpuUser": user_p,
-                    "residentSetSize": int(item["residentSetSize"] / 1024.0 / 1024.0),
-                    "virtualMemorySize": int(
-                        item["virtualMemorySize"] / 1024.0 / 1024.0
-                    ),
-                    "pid": pid,
-                },
-            }
-            points.append(point)
+        point = self._extract_point(proc_data, timestamp)
+        if point:
+            points = [point]
+        else:
+            points = []
+        for item in proc_data["children"]:
+            point = self._extract_point(item, timestamp)
+            if point:
+                points.append(point)
 
         io_data = metrics["value"].get("io", [])
         changed = []
@@ -80,7 +86,7 @@ class MetricsDB:
                 continue
             if self.localhost in location:
                 continue
-            if 'socket' in location:
+            if "socket" in location:
                 print(location)
             rx = item["rx"]
             tx = item["tx"]
