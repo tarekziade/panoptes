@@ -2,7 +2,7 @@ import sys
 from setuptools import setup, find_packages
 
 
-install_requires = ["async_generator"]
+install_requires = ["async_generator", "scipy", "matplotlib", "pyqt5"]
 description = ""
 
 setup(

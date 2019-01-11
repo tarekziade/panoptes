@@ -43,6 +43,7 @@ class GeckoClient:
         self.started_at = None
 
     async def close(self):
+        await self.stop()
         await self.session.close()
 
     def add_action(self, msg):
