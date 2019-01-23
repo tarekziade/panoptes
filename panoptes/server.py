@@ -40,7 +40,7 @@ async def dashboard(request):
 @routes.get("/tools")
 @template("tools.jinja2")
 async def tools(request):
-    return {'cache': random.randint(1, 999)}
+    return {"cache": random.randint(1, 999)}
 
 
 @routes.get("/io_usage")
@@ -80,19 +80,21 @@ async def timeline(request):
 @routes.get("/firefox_version")
 async def version(request):
     if app.gecko is None:
-        return web.json_response({'version': ''})
+        return web.json_response({"version": ""})
     info = await app.gecko.get_support()
-    info = info['value']['application']
-    version = '%(name)s %(updateChannel)s %(version)s' % info
-    return web.json_response({'version': version})
+    info = info["value"]["application"]
+    version = "%(name)s %(updateChannel)s %(version)s" % info
+    return web.json_response({"version": version})
 
 
 @routes.get("/perf_usage")
 async def plots2(request):
     if app.gecko is None:
-        return web.json_response({'perf': [], 'timeline': []})
-    result = {'perf': db().get_perf_metrics(),
-              'timeline': app.gecko.get_timeline(human=False)}
+        return web.json_response({"perf": [], "timeline": []})
+    result = {
+        "perf": db().get_perf_metrics(),
+        "timeline": app.gecko.get_timeline(human=False),
+    }
     return web.json_response(result)
 
 
@@ -128,8 +130,8 @@ async def visit_url(request):
 async def screenshot(request):
     if app.gecko is not None:
         resp = await app.gecko.screenshot()
-        img = base64.b64decode(resp['value'])
-        with open(os.path.join(here, 'static', 'screenshot.png'), 'wb') as f:
+        img = base64.b64decode(resp["value"])
+        with open(os.path.join(here, "static", "screenshot.png"), "wb") as f:
             f.write(img)
     return web.HTTPFound(location="/tools")
 

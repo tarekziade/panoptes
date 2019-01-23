@@ -17,13 +17,12 @@ _CAP = {
         "alwaysMatch": {
             "acceptInsecureCerts": True,
             "moz:firefoxOptions": {
-                 "args": [
-                     "-headless",
-                #    "-no-remote", "-foreground",
-                #    "-profile", "profile-default"
+                "args": [
+                    "-headless",
+                    #    "-no-remote", "-foreground",
+                    #    "-profile", "profile-default"
                 ],
-                "prefs": {"io.activity.enabled": True,
-                          "media.autoplay.default": 0}
+                "prefs": {"io.activity.enabled": True, "media.autoplay.default": 0},
             },
         }
     }
@@ -56,8 +55,9 @@ class GeckoClient:
                 return t.strftime("%H:%M %m/%d/%Y")
             return t.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        return [{"time": _format(time), "action": action}
-                for action, time in self.actions]
+        return [
+            {"time": _format(time), "action": action} for action, time in self.actions
+        ]
 
     def started(self):
         return self.started_at is not None

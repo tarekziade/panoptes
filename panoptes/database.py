@@ -86,8 +86,6 @@ class MetricsDB:
                 continue
             if self.localhost in location:
                 continue
-            if "socket" in location:
-                print(location)
             rx = item["rx"]
             tx = item["tx"]
             old_rx, old_tx = self.io_diffs[location]
@@ -109,7 +107,6 @@ class MetricsDB:
                 "time": timestamp,
                 "fields": {"rx": rx, "tx": tx},
             }
-            print("location %s, %d %d" % (location, rx, tx))
             points.append(point)
             changed.append(location)
 
@@ -165,8 +162,6 @@ class MetricsDB:
                 },
             }
             points.append(point)
-
-        print("Writing %d points" % len(points))
         return self.client.write_points(points)
 
     def get_proc_metrics(self):

@@ -14,3 +14,7 @@ Long-run scenario:
 - Compute linear regression for each metrics
 - Compute activity level
 
+Linear regression in 10 minutes slices
+wait until it gets flat
+if not check that it's steadily growing
+alert

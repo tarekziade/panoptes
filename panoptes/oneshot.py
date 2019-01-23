@@ -21,6 +21,7 @@ def log(msg):
 
 _MACH = "/Users/tarek/Dev/gecko/mozilla-central-opt/mach"
 _GECKO = None
+_COUNTER = 0
 
 
 @asynccontextmanager
@@ -63,22 +64,34 @@ def bye(geckoclient, database):
 
 
 async def write_metrics(db, data):
-    log("Writing metrics...")
+    global _COUNTER
+    _COUNTER += 1
+    if _COUNTER < 4:
+        log("Discarding the first five minutes...")
+        return
+    log("%d minutes - Writing metrics..." % _COUNTER)
     db.write_metrics(data)
 
 
 def check_data(db):
     perf = db.get_perf_metrics()
     # now applying linear regression on metrics
-    y = [m['dom'] for m in db.get_firefox_memory_metrics()]
+    def _total(item):
+        total = 0
+        for field in ("heap", "dom", "audio", "video", "resources"):
+            total += item.get(field, 0)
+        return total
+
+    y = [_total(m) for m in db.get_firefox_memory_metrics()]
     x = range(len(y))
     print(str(y))
     slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
-    log('DOM Memory Correlation coefficient %.2f' % r_value)
-    plt.plot(x, y, 'o', label='DOM Size')
-    plt.plot(x, intercept + slope*x, 'r', label='fitted line')
+    log("Firefox Memory Correlation Coefficient %.2f" % r_value)
+    plt.plot(x, y, "o", label="Firefox Memory")
+    plt.plot(x, intercept + slope * x, "r", label="fitted line")
     plt.legend()
     plt.show()
+
 
 async def run_scenario(url, collect_time=3600):
     gecko = GeckoClient()
